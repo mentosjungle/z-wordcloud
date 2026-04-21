@@ -33,7 +33,7 @@ declare module 'wordcloud' {
   namespace WordCloud {
     const isSupported: boolean
     function stop(): void
-    function minFontSize: number
+    const minFontSize: number 
   }
 
   export = WordCloud
