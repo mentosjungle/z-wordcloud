@@ -26,10 +26,8 @@ jobs:
           node-version: 20
           cache: 'npm'  # ✅ 自动缓存 node_modules
 
-      - name: Install dependencies & build
-        run: |
-          npm ci          # ✅ CI 专用，依赖锁定 + 速度更快
-          npm run build
+      - name: Install dependencies
+        run: npm ci  # ✅ CI 专用，依赖锁定 + 速度更快
         shell: bash
 
       - name: Setup Rust toolchain
@@ -60,38 +58,36 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
         shell: bash
 
-      - name: Install Pake CLI
-        run: npm install -g pake-cli
+      - name: Generate app icon
         shell: bash
+        run: |
+          mkdir -p src-tauri/icons
+          curl -fsSL "https://placehold.co/512x512/6366f1/ffffff.png" -o src-tauri/icons/icon.png
 
-      - name: "Debug: Check dist output"
-        run: ls -la ./dist
-        shell: bash
-
-      - name: Build desktop app with Pake
-        run: pake ./dist --name WordCloud --width 800 --height 600
+      - name: Build desktop app with Tauri
+        run: npm run tauri:build
         shell: bash
         env:
           RUSTUP_DIST_SERVER: https://static.rust-lang.org
           RUSTUP_UPDATE_ROOT: https://static.rust-lang.org/rustup
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
-      - name: "Debug: List packaged files"
-        run: find . -maxdepth 2 -iname "*wordcloud*" -type f
+      - name: "Debug: List bundled artifacts"
         shell: bash
+        run: |
+          echo "=== Bundle directory structure ==="
+          find src-tauri/target/release/bundle -type f 2>/dev/null || true
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            WordCloud*
-            wordcloud*
-            *.exe
-            *.msi
-            *.dmg
-            *.deb
-            *.AppImage
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.AppImage
           draft: false
           prerelease: false
         env:

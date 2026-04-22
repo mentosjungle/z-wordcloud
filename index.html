@@ -5,12 +5,36 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>词云即刻 - 在线词云生成器</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 桌面应用使用系统字体，避免离线环境外链超时 -->
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com"> -->
+    <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet"> -->
   </head>
   <body>
     <div id="app"></div>
+    <!-- 桌面应用调试：捕获全局错误并显示 -->
+    <div id="error-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:99999;padding:24px;font-family:monospace;overflow:auto;">
+      <h2 style="color:#dc2626;margin:0 0 12px;">🚨 应用加载错误</h2>
+      <pre id="error-msg" style="background:#f5f5f5;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;"></pre>
+    </div>
+    <script>
+      window.addEventListener('error', function(e) {
+        var el = document.getElementById('error-overlay');
+        var msg = document.getElementById('error-msg');
+        if (el && msg) {
+          el.style.display = 'block';
+          msg.textContent = (e.error && e.error.stack) ? e.error.stack : (e.message || 'Unknown error');
+        }
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var el = document.getElementById('error-overlay');
+        var msg = document.getElementById('error-msg');
+        if (el && msg) {
+          el.style.display = 'block';
+          msg.textContent = 'Unhandled Promise Rejection:\n' + (e.reason && e.reason.stack ? e.reason.stack : e.reason);
+        }
+      });
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
