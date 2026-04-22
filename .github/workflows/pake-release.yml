@@ -58,11 +58,9 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
         shell: bash
 
-      - name: Generate app icon
+      - name: Generate multi-platform icons
         shell: bash
-        run: |
-          mkdir -p src-tauri/icons
-          curl -fsSL "https://placehold.co/512x512/6366f1/ffffff.png" -o src-tauri/icons/icon.png
+        run: npx tauri icon src-tauri/icons/icon.svg
 
       - name: Build desktop app with Tauri
         run: npm run tauri:build
