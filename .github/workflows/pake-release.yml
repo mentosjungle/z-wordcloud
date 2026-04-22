@@ -1,71 +1,98 @@
-name: Pake 云端打包发布
+name: Release Desktop App
+
 on:
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: write  # ✅ 必需：允许上传 Release 资产
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-22.04]
+
     steps:
-      - name: 拉取代码
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 配置 Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'  # ✅ 自动缓存 node_modules
 
-      - name: 安装依赖并构建 Vue 项目
+      - name: Install dependencies & build
         run: |
-          npm install
+          npm ci          # ✅ CI 专用，依赖锁定 + 速度更快
           npm run build
+        shell: bash
 
-      - name: 配置 Rust 环境（强制使用官方源）
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
         with:
-          toolchain: stable
-      - name: 覆盖 Cargo 镜像配置（解决 rsproxy 超时）
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Configure Cargo registry
+        shell: bash  # ✅ Windows/macOS/Linux 统一使用 bash，避免平台差异
         run: |
           mkdir -p ~/.cargo
           cat > ~/.cargo/config.toml << 'EOF'
           [registries.crates-io]
           protocol = "sparse"
-          [source.crates-io]
-          replace-with = "crates-io"
+          [net]
+          git-fetch-with-cli = true
           EOF
 
-      - name: 安装 Linux 系统依赖 (仅 Ubuntu)
+      - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+        shell: bash
 
-      - name: 安装 Pake CLI
+      - name: Install Pake CLI
         run: npm install -g pake-cli
+        shell: bash
 
-      - name: 使用 Pake 打包
+      - name: Debug: Check dist output
+        run: ls -la ./dist
+        shell: bash
+
+      - name: Build desktop app with Pake
         run: pake ./dist --name WordCloud --width 800 --height 600
+        shell: bash
         env:
-          # 确保 Rust 编译不走任何代理或国内镜像
           RUSTUP_DIST_SERVER: https://static.rust-lang.org
           RUSTUP_UPDATE_ROOT: https://static.rust-lang.org/rustup
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
-      - name: 上传安装包到 GitHub Releases
+      - name: Debug: List packaged files
+        run: find . -maxdepth 2 -iname "*wordcloud*" -type f
+        shell: bash
+
+      - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            WordCloud_*.exe
-            WordCloud_*.msi
-            WordCloud_*.dmg
-            WordCloud_*.deb
-            WordCloud_*.AppImage
+            WordCloud*
+            wordcloud*
+            *.exe
+            *.msi
+            *.dmg
+            *.deb
+            *.AppImage
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
