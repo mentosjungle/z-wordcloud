@@ -27,6 +27,20 @@ jobs:
           npm install
           npm run build
 
+      - name: 配置 Rust 环境（强制使用官方源）
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: 覆盖 Cargo 镜像配置（解决 rsproxy 超时）
+        run: |
+          mkdir -p ~/.cargo
+          cat > ~/.cargo/config.toml << 'EOF'
+          [registries.crates-io]
+          protocol = "sparse"
+          [source.crates-io]
+          replace-with = "crates-io"
+          EOF
+
       - name: 安装 Linux 系统依赖 (仅 Ubuntu)
         if: matrix.os == 'ubuntu-22.04'
         run: |
@@ -38,6 +52,11 @@ jobs:
 
       - name: 使用 Pake 打包
         run: pake ./dist --name WordCloud --width 800 --height 600
+        env:
+          # 确保 Rust 编译不走任何代理或国内镜像
+          RUSTUP_DIST_SERVER: https://static.rust-lang.org
+          RUSTUP_UPDATE_ROOT: https://static.rust-lang.org/rustup
+          CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
       - name: 上传安装包到 GitHub Releases
         uses: softprops/action-gh-release@v2
