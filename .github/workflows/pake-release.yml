@@ -1,0 +1,44 @@
+name: Pake 云端打包发布
+on:
+  push:
+    tags:
+      - 'v*' # 推送 v1.0.0 等标签时触发
+
+permissions:
+  contents: write # 允许创建 Release 和上传文件
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 安装依赖并构建 Vue 项目
+        run: |
+          npm install
+          npm run build
+
+      - name: 使用 Pake 打包为桌面应用
+        uses: tw93/pake-action@main
+        with:
+          name: WordCloud
+          width: 800
+          height: 600
+          input: ./dist
+          # icon: ./public/icon.png # 若有 512x512 png 可取消注释
+
+      - name: 上传安装包到 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
