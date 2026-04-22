@@ -64,7 +64,7 @@ jobs:
         run: npm install -g pake-cli
         shell: bash
 
-      - name: Debug: Check dist output
+      - name: "Debug: Check dist output"
         run: ls -la ./dist
         shell: bash
 
@@ -76,7 +76,7 @@ jobs:
           RUSTUP_UPDATE_ROOT: https://static.rust-lang.org/rustup
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
-      - name: Debug: List packaged files
+      - name: "Debug: List packaged files"
         run: find . -maxdepth 2 -iname "*wordcloud*" -type f
         shell: bash
 
