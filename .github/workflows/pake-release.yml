@@ -2,10 +2,10 @@ name: Pake 云端打包发布
 on:
   push:
     tags:
-      - 'v*' # 推送 v1.0.0 等标签时触发
+      - 'v*'
 
 permissions:
-  contents: write # 允许创建 Release 和上传文件
+  contents: write
 
 jobs:
   build:
@@ -27,18 +27,26 @@ jobs:
           npm install
           npm run build
 
-      - name: 使用 Pake 打包为桌面应用
-        uses: tw93/pake-action@main
-        with:
-          name: WordCloud
-          width: 800
-          height: 600
-          input: ./dist
-          # icon: ./public/icon.png # 若有 512x512 png 可取消注释
+      - name: 安装 Linux 系统依赖 (仅 Ubuntu)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: 安装 Pake CLI
+        run: npm install -g pake-cli
+
+      - name: 使用 Pake 打包
+        run: pake ./dist --name WordCloud --width 800 --height 600
 
       - name: 上传安装包到 GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: output/*
+          files: |
+            WordCloud_*.exe
+            WordCloud_*.msi
+            WordCloud_*.dmg
+            WordCloud_*.deb
+            WordCloud_*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
