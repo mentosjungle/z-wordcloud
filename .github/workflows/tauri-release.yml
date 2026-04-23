@@ -4,9 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
-  contents: write  # ✅ 必需：允许上传 Release 资产
+  contents: write
 
 jobs:
   build:
@@ -24,24 +25,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'  # ✅ 自动缓存 node_modules
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci  # ✅ CI 专用，依赖锁定 + 速度更快
+        run: npm ci
         shell: bash
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Cargo registry
+      - name: Cache Cargo registry & build
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Configure Cargo registry
-        shell: bash  # ✅ Windows/macOS/Linux 统一使用 bash，避免平台差异
+        shell: bash
         run: |
           mkdir -p ~/.cargo
           cat > ~/.cargo/config.toml << 'EOF'
@@ -55,7 +59,7 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libxdo-dev libssl-dev
         shell: bash
 
       - name: Generate multi-platform icons
@@ -66,15 +70,20 @@ jobs:
         run: npm run tauri:build
         shell: bash
         env:
-          RUSTUP_DIST_SERVER: https://static.rust-lang.org
-          RUSTUP_UPDATE_ROOT: https://static.rust-lang.org/rustup
           CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
-      - name: "Debug: List bundled artifacts"
-        shell: bash
-        run: |
-          echo "=== Bundle directory structure ==="
-          find src-tauri/target/release/bundle -type f 2>/dev/null || true
+      - name: Upload build artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-bundle-${{ runner.os }}
+          path: |
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.AppImage
+          if-no-files-found: warn
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
