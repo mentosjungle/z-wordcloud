@@ -37,7 +37,6 @@
     ],
     "windows": {
       "nsis": {
-        "installerName": "词云即刻",
         "installerIcon": "icons/icon.ico",
         "languages": [
           "SimpChinese",
