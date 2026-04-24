@@ -4,7 +4,9 @@ import WordCloudCanvas from './components/WordCloudCanvas.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import WordFreqList from './components/WordFreqList.vue'
 import { initSegmenter, countWordFrequency, addCustomDictWords } from './utils/segmenter'
+import { convertFrequencies } from './utils/freqHelpers'
 import type { WordFrequency, CloudSettings } from './types'
+import type { DataMode } from './utils/freqHelpers'
 
 const text = ref('')
 const wordFrequencies = ref<WordFrequency[]>([])
@@ -12,6 +14,7 @@ const isGenerating = ref(false)
 const isWasmReady = ref(false)
 const wasmError = ref('')
 const showSettings = ref(true)
+const dataMode = ref<DataMode>('frequency')
 
 // Phase 2: 自定义词典 & 停用词
 const customDict = ref<string[]>([])
@@ -68,8 +71,14 @@ function handleClear() {
   wordFrequencies.value = []
 }
 
-function handleDeleteWord(word: string) {
-  wordFrequencies.value = wordFrequencies.value.filter(w => w.word !== word)
+function handleUpdateList(list: WordFrequency[]) {
+  wordFrequencies.value = list
+}
+
+function handleModeChange(mode: DataMode) {
+  if (mode === dataMode.value) return
+  wordFrequencies.value = convertFrequencies(wordFrequencies.value, dataMode.value, mode)
+  dataMode.value = mode
 }
 
 // --- 自定义词典管理 ---
@@ -127,7 +136,10 @@ function clearStopwords() {
         <!-- Left Panel: Input + Settings -->
         <div class="w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 space-y-4">
           <!-- Text Input Card -->
-          <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div
+            class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-opacity"
+            :class="dataMode === 'weight' ? 'opacity-50 pointer-events-none' : ''"
+          >
             <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
               <h2 class="text-sm font-medium text-slate-700">输入文本</h2>
               <span class="text-xs text-slate-400">{{ charCount }} 字</span>
@@ -137,12 +149,12 @@ function clearStopwords() {
                 v-model="text"
                 class="w-full h-48 resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition"
                 placeholder="在此粘贴或输入文本内容...&#10;&#10;支持中文、英文等多种语言。系统将自动进行分词和词频统计，生成精美词云。"
-                :disabled="!isWasmReady"
+                :disabled="!isWasmReady || dataMode === 'weight'"
               ></textarea>
               <div class="mt-3 flex gap-2">
                 <button
                   @click="generate"
-                  :disabled="!text.trim() || isGenerating || !isWasmReady"
+                  :disabled="!text.trim() || isGenerating || !isWasmReady || dataMode === 'weight'"
                   class="flex-1 bg-indigo-600 text-white text-sm font-medium py-2.5 px-4 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
                 >
                   <svg v-if="isGenerating" class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -196,10 +208,11 @@ function clearStopwords() {
 
           <!-- Word Frequency List -->
           <WordFreqList
-            v-if="wordFrequencies.length > 0"
             :frequencies="wordFrequencies"
             :max-display="50"
-            @delete-word="handleDeleteWord"
+            :data-mode="dataMode"
+            @update-list="handleUpdateList"
+            @mode-change="handleModeChange"
           />
         </div>
 
