@@ -1,8 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "WordCloud",
-  "version": "0.0.0",
-  "identifier": "com.wordcloud.app",
+  "identifier": "com.wordcloud.immediately",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -25,9 +24,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
